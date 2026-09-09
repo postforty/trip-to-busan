@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { mockLetters } from '@/data/mockLetters';
 import { mockLessons } from '@/data/mockLessons';
@@ -14,13 +14,28 @@ import {
   MessageSquareText,
   BookOpen,
   Sparkles,
-  Mail
+  Mail,
+  FolderArchive
 } from 'lucide-react';
 
 export default function Home() {
   // 데일리 학습 상태
   const [currentLesson, setCurrentLesson] = useState<DailyLesson>(mockLessons[0]);
   const [isAiGenerated, setIsAiGenerated] = useState(false);
+  const [savedLessons, setSavedLessons] = useState<DailyLesson[]>([]);
+
+  // 로컬 스토리지에서 보관된 레슨 로드
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('saved_lessons');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setTimeout(() => setSavedLessons(parsed), 0);
+      }
+    } catch {
+      // 무시
+    }
+  }, []);
 
   // 로컬 편지 필터링 상태
   const [selectedCategory, setSelectedCategory] = useState<Category>('all');
@@ -94,8 +109,8 @@ export default function Home() {
             </h2>
           </div>
 
-          {/* 기본 프리셋 레슨 선택 칩 */}
-          <div className="flex items-center gap-1">
+          {/* 기본 프리셋 레슨 및 보관함 레슨 선택 칩 */}
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
             {mockLessons.map((lesson) => (
               <button
                 key={lesson.id}
@@ -103,13 +118,32 @@ export default function Home() {
                   setCurrentLesson(lesson);
                   setIsAiGenerated(false);
                 }}
-                className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                className={`px-2 py-1 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all ${
                   currentLesson.id === lesson.id && !isAiGenerated
                     ? 'bg-[#2D3748] text-white'
                     : 'bg-white text-gray-400 border border-[#EDE8E1] hover:bg-gray-50'
                 }`}
               >
                 Day {lesson.dayNumber}
+              </button>
+            ))}
+
+            {savedLessons.map((lesson, idx) => (
+              <button
+                key={lesson.id}
+                onClick={() => {
+                  setCurrentLesson(lesson);
+                  setIsAiGenerated(true);
+                }}
+                className={`px-2 py-1 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all flex items-center gap-1 ${
+                  currentLesson.id === lesson.id
+                    ? 'bg-[#E07A5F] text-white'
+                    : 'bg-[#FAF0E6] text-[#E07A5F] border border-[#F4DDD4] hover:bg-[#F4DDD4]'
+                }`}
+                title={lesson.themeTitle}
+              >
+                <FolderArchive className="w-2.5 h-2.5" />
+                <span>보관 {idx + 1}</span>
               </button>
             ))}
           </div>

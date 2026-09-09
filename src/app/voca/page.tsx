@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { SavedWord } from '@/types';
+import { SavedWord, DailyLesson } from '@/types';
 import { speakJapanese } from '@/utils/tts';
 import {
   Bookmark,
@@ -9,24 +9,41 @@ import {
   RotateCw,
   CheckCircle2,
   Trash2,
-  BookOpen
+  BookOpen,
+  FolderArchive,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 export default function VocaPage() {
+  // 상단 메인 탭: 단어&표현 vs 보관한 학습자료
+  const [mainView, setMainView] = useState<'words' | 'lessons'>('words');
+
+  // 단어 & 표현 상태
   const [words, setWords] = useState<SavedWord[]>([]);
-  const [activeTab, setActiveTab] = useState<'all' | 'memorized' | 'learning'>('all');
+  const [activeWordFilter, setActiveWordFilter] = useState<'all' | 'memorized' | 'learning'>('all');
   const [isFlashcardMode, setIsFlashcardMode] = useState(false);
   const [flashcardIndex, setFlashcardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
 
-  // 로컬 스토리지에서 저장된 단어 로드
+  // 보관한 레슨 상태
+  const [savedLessons, setSavedLessons] = useState<DailyLesson[]>([]);
+  const [expandedLessonId, setExpandedLessonId] = useState<string | null>(null);
+
+  // 로컬 스토리지에서 단어 및 보관된 레슨 로드
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('saved_words');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setTimeout(() => setWords(parsed), 0);
-      }
+      const savedWordsData = localStorage.getItem('saved_words');
+      const savedLessonsData = localStorage.getItem('saved_lessons');
+
+      setTimeout(() => {
+        if (savedWordsData) {
+          setWords(JSON.parse(savedWordsData));
+        }
+        if (savedLessonsData) {
+          setSavedLessons(JSON.parse(savedLessonsData));
+        }
+      }, 0);
     } catch {
       // 무시
     }
@@ -59,16 +76,39 @@ export default function VocaPage() {
     }
   };
 
+  // 보관한 레슨 삭제
+  const handleDeleteLesson = (id: string) => {
+    const updated = savedLessons.filter((l) => l.id !== id);
+    setSavedLessons(updated);
+    try {
+      localStorage.setItem('saved_lessons', JSON.stringify(updated));
+    } catch {
+      // 무시
+    }
+  };
+
+  const [playingId, setPlayingId] = useState<string | null>(null);
+
   // 발음 재생
-  const handlePlay = (e: React.MouseEvent, text: string) => {
+  const handlePlay = (e: React.MouseEvent, text: string, id?: string) => {
     e.stopPropagation();
-    speakJapanese(text);
+    if (id) setPlayingId(id);
+    speakJapanese(
+      text,
+      0.9,
+      () => {
+        if (id) setPlayingId(id);
+      },
+      () => {
+        if (id) setPlayingId(null);
+      }
+    );
   };
 
   // 필터링된 단어 목록
   const filteredWords = words.filter((w) => {
-    if (activeTab === 'memorized') return w.isMemorized;
-    if (activeTab === 'learning') return !w.isMemorized;
+    if (activeWordFilter === 'memorized') return w.isMemorized;
+    if (activeWordFilter === 'learning') return !w.isMemorized;
     return true;
   });
 
@@ -76,15 +116,15 @@ export default function VocaPage() {
 
   return (
     <div className="px-4 pt-4 space-y-5">
-      {/* 헤더 인트로 */}
+      {/* 1. 헤더 인트로 */}
       <section className="bg-gradient-to-br from-[#FAF0E6] to-[#FFF9F2] rounded-3xl p-5 border border-[#F4DDD4]">
         <div className="flex items-center justify-between mb-1.5">
           <div className="flex items-center gap-1.5 text-xs font-bold text-[#E07A5F]">
             <Bookmark className="w-4 h-4" />
-            <span>나만의 일본어 보카</span>
+            <span>나만의 일본어 보관함</span>
           </div>
 
-          {filteredWords.length > 0 && (
+          {mainView === 'words' && filteredWords.length > 0 && (
             <button
               onClick={() => {
                 setIsFlashcardMode(!isFlashcardMode);
@@ -100,207 +140,389 @@ export default function VocaPage() {
         </div>
 
         <h1 className="text-lg font-black text-[#2D3748] tracking-tight mb-1.5">
-          내 단어장 ({words.length}개)
+          학습 보관소
         </h1>
         <p className="text-xs text-[#718096] leading-relaxed">
-          데일리 학습에서 저장한 어휘와 표현을 복습하고, 플래시카드로 완벽하게 암기하세요.
+          스크랩한 필수 단어와 핵심 표현을 암기하고, 마음에 드는 AI 맞춤 레슨을 다시 꺼내보세요.
         </p>
       </section>
 
-      {/* 탭 필터 (전체 / 학습 중 / 암기 완료) */}
-      <div className="flex items-center gap-2 text-xs">
+      {/* 2. 상단 2단 세그먼트 메인 탭 */}
+      <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-2xl text-xs font-bold">
         <button
-          onClick={() => setActiveTab('all')}
-          className={`px-3 py-1.5 rounded-xl font-medium transition-all ${
-            activeTab === 'all'
-              ? 'bg-[#2D3748] text-white font-bold'
-              : 'bg-white text-gray-500 border border-[#EDE8E1] hover:bg-gray-50'
+          onClick={() => setMainView('words')}
+          className={`py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+            mainView === 'words'
+              ? 'bg-white text-[#2D3748] shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
           }`}
         >
-          전체 ({words.length})
+          <BookOpen className="w-3.5 h-3.5 text-[#E07A5F]" />
+          <span>단어 & 표현 암기 ({words.length})</span>
         </button>
+
         <button
-          onClick={() => setActiveTab('learning')}
-          className={`px-3 py-1.5 rounded-xl font-medium transition-all ${
-            activeTab === 'learning'
-              ? 'bg-[#2D3748] text-white font-bold'
-              : 'bg-white text-gray-500 border border-[#EDE8E1] hover:bg-gray-50'
+          onClick={() => setMainView('lessons')}
+          className={`py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+            mainView === 'lessons'
+              ? 'bg-white text-[#2D3748] shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
           }`}
         >
-          학습 중 ({words.filter((w) => !w.isMemorized).length})
-        </button>
-        <button
-          onClick={() => setActiveTab('memorized')}
-          className={`px-3 py-1.5 rounded-xl font-medium transition-all ${
-            activeTab === 'memorized'
-              ? 'bg-[#2D3748] text-white font-bold'
-              : 'bg-white text-gray-500 border border-[#EDE8E1] hover:bg-gray-50'
-          }`}
-        >
-          암기 완료 ({words.filter((w) => w.isMemorized).length})
+          <FolderArchive className="w-3.5 h-3.5 text-blue-600" />
+          <span>보관한 레슨 ({savedLessons.length})</span>
         </button>
       </div>
 
-      {/* 단어장이 비어있는 경우 */}
-      {filteredWords.length === 0 ? (
-        <div className="bg-white rounded-3xl p-10 text-center border border-[#EDE8E1] space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-[#FAF0E6] flex items-center justify-center mx-auto text-[#E07A5F]">
-            <BookOpen className="w-6 h-6" />
-          </div>
-          <div className="space-y-1">
-            <h3 className="text-sm font-bold text-[#2D3748]">저장된 단어가 없습니다</h3>
-            <p className="text-xs text-gray-400">
-              데일리 학습 카드에서 북마크 아이콘을 눌러 단어를 추가해보세요.
-            </p>
-          </div>
-        </div>
-      ) : isFlashcardMode ? (
-        /* 플래시카드 암기 모드 */
+      {/* 3-A. [단어 & 표현 암기] 뷰 */}
+      {mainView === 'words' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between text-xs text-gray-400 px-1">
-            <span>진행률: {flashcardIndex + 1} / {filteredWords.length}</span>
-            <span>카드를 터치하면 뒤집힙니다</span>
+          {/* 상태 필터 버튼 (전체 / 학습 중 / 암기 완료) */}
+          <div className="flex items-center gap-2 text-xs">
+            <button
+              onClick={() => setActiveWordFilter('all')}
+              className={`px-3 py-1.5 rounded-xl font-medium transition-all ${
+                activeWordFilter === 'all'
+                  ? 'bg-[#2D3748] text-white font-bold'
+                  : 'bg-white text-gray-500 border border-[#EDE8E1] hover:bg-gray-50'
+              }`}
+            >
+              전체 ({words.length})
+            </button>
+            <button
+              onClick={() => setActiveWordFilter('learning')}
+              className={`px-3 py-1.5 rounded-xl font-medium transition-all ${
+                activeWordFilter === 'learning'
+                  ? 'bg-[#2D3748] text-white font-bold'
+                  : 'bg-white text-gray-500 border border-[#EDE8E1] hover:bg-gray-50'
+              }`}
+            >
+              학습 중 ({words.filter((w) => !w.isMemorized).length})
+            </button>
+            <button
+              onClick={() => setActiveWordFilter('memorized')}
+              className={`px-3 py-1.5 rounded-xl font-medium transition-all ${
+                activeWordFilter === 'memorized'
+                  ? 'bg-[#2D3748] text-white font-bold'
+                  : 'bg-white text-gray-500 border border-[#EDE8E1] hover:bg-gray-50'
+              }`}
+            >
+              암기 완료 ({words.filter((w) => w.isMemorized).length})
+            </button>
           </div>
 
-          {currentFlashcard && (
-            <div
-              onClick={() => setIsFlipped(!isFlipped)}
-              className="min-h-64 bg-white rounded-3xl p-8 border border-[#EDE8E1] card-shadow cursor-pointer flex flex-col justify-between items-center text-center transition-all hover:border-[#E07A5F]/50 select-none"
-            >
-              <div className="w-full flex justify-between items-center text-gray-400 text-xs">
-                <span className="border border-gray-200 px-2 py-0.5 rounded text-[10px]">
-                  {currentFlashcard.partOfSpeech}
-                </span>
-                <button
-                  onClick={(e) => handlePlay(e, currentFlashcard.kanji)}
-                  className="p-2 rounded-full hover:bg-gray-100 text-gray-600"
-                  title="발음 듣기"
-                >
-                  <Volume2 className="w-5 h-5" />
-                </button>
+          {/* 단어가 없을 때 */}
+          {filteredWords.length === 0 ? (
+            <div className="bg-white rounded-3xl p-10 text-center border border-[#EDE8E1] space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-[#FAF0E6] flex items-center justify-center mx-auto text-[#E07A5F]">
+                <BookOpen className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-[#2D3748]">저장된 단어와 표현이 없습니다</h3>
+                <p className="text-xs text-gray-400">
+                  데일리 학습 카드에서 북마크 아이콘을 눌러 표현과 어휘를 스크랩해보세요.
+                </p>
+              </div>
+            </div>
+          ) : isFlashcardMode ? (
+            /* 플래시카드 암기 모드 */
+            <div className="space-y-4">
+              <div className="flex items-center justify-between text-xs text-gray-400 px-1">
+                <span>진행률: {flashcardIndex + 1} / {filteredWords.length}</span>
+                <span>카드를 터치하면 뒤집힙니다</span>
               </div>
 
-              {!isFlipped ? (
-                /* 앞면: 일본어 한자 및 요미가나 */
-                <div className="space-y-2 my-auto">
-                  <p className="text-sm text-gray-400 font-mono">
-                    {currentFlashcard.reading}
-                  </p>
-                  <h2 className="text-3xl font-black text-[#2D3748] tracking-tight">
-                    {currentFlashcard.kanji}
-                  </h2>
-                  <p className="text-[11px] text-[#E07A5F] pt-2">
-                    터치하여 뜻 확인하기
-                  </p>
-                </div>
-              ) : (
-                /* 뒷면: 한국어 뜻 */
-                <div className="space-y-2 my-auto">
-                  <h2 className="text-2xl font-black text-[#E07A5F]">
-                    {currentFlashcard.meaning}
-                  </h2>
-                  <p className="text-xs text-gray-400 font-mono">
-                    {currentFlashcard.kanji} ({currentFlashcard.reading})
-                  </p>
+              {currentFlashcard && (
+                <div
+                  onClick={() => setIsFlipped(!isFlipped)}
+                  className="min-h-64 bg-white rounded-3xl p-8 border border-[#EDE8E1] card-shadow cursor-pointer flex flex-col justify-between items-center text-center transition-all hover:border-[#E07A5F]/50 select-none"
+                >
+                  <div className="w-full flex justify-between items-center text-gray-400 text-xs">
+                    <span className="border border-gray-200 px-2 py-0.5 rounded text-[10px]">
+                      {currentFlashcard.partOfSpeech}
+                    </span>
+                    <button
+                      onClick={(e) => handlePlay(e, currentFlashcard.kanji)}
+                      className="p-2 rounded-full hover:bg-gray-100 text-gray-600"
+                      title="발음 듣기"
+                    >
+                      <Volume2 className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {!isFlipped ? (
+                    /* 앞면 */
+                    <div className="space-y-2 my-auto">
+                      <p className="text-sm text-gray-400 font-mono">
+                        {currentFlashcard.reading}
+                      </p>
+                      <h2 className="text-2xl font-black text-[#2D3748] tracking-tight leading-snug">
+                        {currentFlashcard.kanji}
+                      </h2>
+                      <p className="text-[11px] text-[#E07A5F] pt-2">
+                        터치하여 뜻 확인하기
+                      </p>
+                    </div>
+                  ) : (
+                    /* 뒷면 */
+                    <div className="space-y-2 my-auto">
+                      <h2 className="text-xl font-black text-[#E07A5F] leading-snug">
+                        {currentFlashcard.meaning}
+                      </h2>
+                      <p className="text-xs text-gray-400 font-mono">
+                        {currentFlashcard.kanji} ({currentFlashcard.reading})
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="w-full flex justify-between items-center pt-4 border-t border-gray-100">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleMemorized(currentFlashcard.id);
+                      }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                        currentFlashcard.isMemorized
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
+                      }`}
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>{currentFlashcard.isMemorized ? '외웠어요' : '아직 외우는 중'}</span>
+                    </button>
+
+                    <div className="flex gap-1.5">
+                      <button
+                        disabled={flashcardIndex === 0}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsFlipped(false);
+                          setFlashcardIndex((prev) => Math.max(0, prev - 1));
+                        }}
+                        className="px-3 py-1.5 bg-gray-50 disabled:opacity-30 rounded-xl text-xs border border-gray-200 font-medium"
+                      >
+                        이전
+                      </button>
+                      <button
+                        disabled={flashcardIndex === filteredWords.length - 1}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsFlipped(false);
+                          setFlashcardIndex((prev) => Math.min(filteredWords.length - 1, prev + 1));
+                        }}
+                        className="px-3 py-1.5 bg-[#2D3748] disabled:opacity-30 text-white rounded-xl text-xs font-bold"
+                      >
+                        다음
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
-
-              <div className="w-full flex justify-between items-center pt-4 border-t border-gray-100">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleToggleMemorized(currentFlashcard.id);
-                  }}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
-                    currentFlashcard.isMemorized
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                      : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
-                  }`}
+            </div>
+          ) : (
+            /* 일반 리스트 뷰 */
+            <div className="space-y-2">
+              {filteredWords.map((word) => (
+                <div
+                  key={word.id}
+                  className="bg-white rounded-2xl p-4 border border-[#EDE8E1] card-shadow flex items-center justify-between gap-3 text-xs"
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>{currentFlashcard.isMemorized ? '외웠어요' : '아직 외우는 중'}</span>
-                </button>
+                  <div className="flex items-center gap-2.5">
+                    <button
+                      onClick={(e) => handlePlay(e, word.kanji)}
+                      className="p-2 rounded-xl bg-[#FBF9F5] border border-[#EDE8E1] text-gray-500 hover:text-[#E07A5F]"
+                      title="발음 듣기"
+                    >
+                      <Volume2 className="w-4 h-4" />
+                    </button>
 
-                <div className="flex gap-1.5">
-                  <button
-                    disabled={flashcardIndex === 0}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsFlipped(false);
-                      setFlashcardIndex((prev) => Math.max(0, prev - 1));
-                    }}
-                    className="px-3 py-1.5 bg-gray-50 disabled:opacity-30 rounded-xl text-xs border border-gray-200 font-medium"
-                  >
-                    이전
-                  </button>
-                  <button
-                    disabled={flashcardIndex === filteredWords.length - 1}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsFlipped(false);
-                      setFlashcardIndex((prev) => Math.min(filteredWords.length - 1, prev + 1));
-                    }}
-                    className="px-3 py-1.5 bg-[#2D3748] disabled:opacity-30 text-white rounded-xl text-xs font-bold"
-                  >
-                    다음
-                  </button>
+                    <div>
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-sm font-bold text-[#2D3748]">{word.kanji}</span>
+                        <span className="text-[11px] text-gray-400 font-mono">({word.reading})</span>
+                        <span className="text-[9px] text-gray-400 border border-gray-200 px-1 rounded">
+                          {word.partOfSpeech}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-600 mt-0.5">{word.meaning}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => handleToggleMemorized(word.id)}
+                      className={`p-1.5 rounded-lg border transition-all ${
+                        word.isMemorized
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100'
+                      }`}
+                      title={word.isMemorized ? '암기 완료' : '학습 중'}
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                    </button>
+
+                    <button
+                      onClick={() => handleDeleteWord(word.id)}
+                      className="p-1.5 rounded-lg border border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-200 transition-colors"
+                      title="삭제"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
           )}
         </div>
-      ) : (
-        /* 일반 리스트 뷰 */
-        <div className="space-y-2">
-          {filteredWords.map((word) => (
-            <div
-              key={word.id}
-              className="bg-white rounded-2xl p-4 border border-[#EDE8E1] card-shadow flex items-center justify-between gap-3 text-xs"
-            >
-              <div className="flex items-center gap-2.5">
-                <button
-                  onClick={(e) => handlePlay(e, word.kanji)}
-                  className="p-2 rounded-xl bg-[#FBF9F5] border border-[#EDE8E1] text-gray-500 hover:text-[#E07A5F]"
-                  title="발음 듣기"
-                >
-                  <Volume2 className="w-4 h-4" />
-                </button>
+      )}
 
-                <div>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-sm font-bold text-[#2D3748]">{word.kanji}</span>
-                    <span className="text-[11px] text-gray-400 font-mono">({word.reading})</span>
-                    <span className="text-[9px] text-gray-400 border border-gray-200 px-1 rounded">
-                      {word.partOfSpeech}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-600 mt-0.5">{word.meaning}</p>
-                </div>
+      {/* 3-B. [보관한 학습 자료 (Saved Lessons)] 뷰 */}
+      {mainView === 'lessons' && (
+        <div className="space-y-3">
+          {savedLessons.length === 0 ? (
+            <div className="bg-white rounded-3xl p-10 text-center border border-[#EDE8E1] space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto text-blue-600">
+                <FolderArchive className="w-6 h-6" />
               </div>
-
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => handleToggleMemorized(word.id)}
-                  className={`p-1.5 rounded-lg border transition-all ${
-                    word.isMemorized
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                      : 'bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100'
-                  }`}
-                  title={word.isMemorized ? '암기 완료' : '학습 중'}
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                </button>
-
-                <button
-                  onClick={() => handleDeleteWord(word.id)}
-                  className="p-1.5 rounded-lg border border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-200 transition-colors"
-                  title="삭제"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-[#2D3748]">보관된 레슨이 없습니다</h3>
+                <p className="text-xs text-gray-400">
+                  학습 카드 상단의 &apos;레슨 보관&apos; 버튼을 누르면 전체 학습 자료가 여기에 저장됩니다.
+                </p>
               </div>
             </div>
-          ))}
+          ) : (
+            savedLessons.map((lesson) => {
+              const isExpanded = expandedLessonId === lesson.id;
+              return (
+                <div
+                  key={lesson.id}
+                  className="bg-white rounded-2xl border border-[#EDE8E1] card-shadow overflow-hidden transition-all text-xs"
+                >
+                  {/* 레슨 헤더 */}
+                  <div
+                    onClick={() => setExpandedLessonId(isExpanded ? null : lesson.id)}
+                    className="p-4 cursor-pointer hover:bg-gray-50/50 flex items-center justify-between gap-2"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="px-2 py-0.5 rounded-md bg-[#FAF0E6] text-[#E07A5F] font-bold text-[10px]">
+                          {lesson.seriesTitle}
+                        </span>
+                        <span className="font-bold text-[#2D3748]">
+                          {lesson.themeTitle}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-gray-500">
+                        {lesson.keyExpression.japanese} ({lesson.keyExpression.korean})
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={(e) => handlePlay(e, lesson.keyExpression.japanese, `saved-key-${lesson.id}`)}
+                        className={`p-1.5 rounded-lg border transition-all ${
+                          playingId === `saved-key-${lesson.id}`
+                            ? 'bg-[#FAF0E6] text-[#E07A5F] border-[#E07A5F]'
+                            : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+                        }`}
+                        title="핵심 표현 발음 듣기"
+                      >
+                        <Volume2 className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteLesson(lesson.id);
+                        }}
+                        className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-gray-100"
+                        title="보관함에서 삭제"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+
+                      <div className="p-1 text-gray-400">
+                        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 펼쳐진 상세 자료 영역 */}
+                  {isExpanded && (
+                    <div className="p-4 pt-0 border-t border-gray-100 space-y-3 bg-[#FBF9F5]/40">
+                      {/* 대화문 */}
+                      <div className="space-y-1.5 pt-3">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-gray-500 text-[10px] block">
+                            실전 대화 상황:
+                          </span>
+                          <span className="text-[9px] text-gray-400">
+                            스피커를 눌러 원어민 발음 듣기
+                          </span>
+                        </div>
+
+                        {lesson.dialogue.map((line, idx) => {
+                          const linePlayId = `saved-line-${lesson.id}-${idx}`;
+                          const isPlayingLine = playingId === linePlayId;
+                          return (
+                            <div
+                              key={idx}
+                              className="bg-white p-3 rounded-xl border border-gray-200 hover:border-[#E07A5F]/40 transition-colors flex items-start justify-between gap-3"
+                            >
+                              <div className="space-y-0.5">
+                                <span className="text-[10px] font-bold text-gray-400 block">
+                                  {line.speaker}
+                                </span>
+                                <p className="font-semibold text-gray-800 text-xs leading-relaxed">
+                                  {line.japanese}
+                                </p>
+                                <p className="text-[11px] text-gray-500">
+                                  {line.korean}
+                                </p>
+                              </div>
+
+                              <button
+                                onClick={(e) => handlePlay(e, line.japanese, linePlayId)}
+                                className={`p-1.5 rounded-lg border shrink-0 transition-colors ${
+                                  isPlayingLine
+                                    ? 'bg-[#FAF0E6] text-[#E07A5F] border-[#E07A5F]'
+                                    : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100'
+                                }`}
+                                title="대화 음성 듣기"
+                              >
+                                <Volume2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* 문법 포인트 */}
+                      <div className="bg-white p-3 rounded-xl border border-gray-200 space-y-1">
+                        <span className="font-bold text-[#2E7D32] text-[10px] block">
+                          문법 포인트: {lesson.grammar.title}
+                        </span>
+                        <p className="text-gray-700 leading-relaxed">
+                          {lesson.grammar.explanation}
+                        </p>
+                      </div>
+
+                      {/* 뉘앙스 팁 */}
+                      <div className="bg-[#FAF0E6]/60 p-3 rounded-xl border border-[#F4DDD4] text-[#8C5243]">
+                        <span className="font-bold text-[10px] block mb-0.5">
+                          원어민 뉘앙스 팁:
+                        </span>
+                        <p className="leading-relaxed">
+                          {lesson.nuanceTip}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
       )}
     </div>

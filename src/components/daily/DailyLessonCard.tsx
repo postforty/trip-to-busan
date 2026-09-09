@@ -24,12 +24,14 @@ export default function DailyLessonCard({ lesson, isAiGenerated }: DailyLessonCa
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [savedWordIds, setSavedWordIds] = useState<Set<string>>(new Set());
   const [isLessonCompleted, setIsLessonCompleted] = useState(false);
+  const [isLessonSaved, setIsLessonSaved] = useState(false);
 
-  // 로컬 스토리지에서 저장된 단어 및 학습 완료 여부 로드
+  // 로컬 스토리지에서 저장된 단어 및 학습 완료 여부, 레슨 보관 여부 로드
   useEffect(() => {
     try {
       const saved = localStorage.getItem('saved_words');
       const completed = localStorage.getItem(`lesson_completed_${lesson.id}`);
+      const savedLessons = localStorage.getItem('saved_lessons');
 
       setTimeout(() => {
         if (saved) {
@@ -37,6 +39,13 @@ export default function DailyLessonCard({ lesson, isAiGenerated }: DailyLessonCa
           setSavedWordIds(new Set(words.map((w) => w.id)));
         }
         setIsLessonCompleted(completed === 'true');
+
+        if (savedLessons) {
+          const lessons: DailyLesson[] = JSON.parse(savedLessons);
+          setIsLessonSaved(lessons.some((l) => l.id === lesson.id));
+        } else {
+          setIsLessonSaved(false);
+        }
       }, 0);
     } catch {
       // 로컬 스토리지 읽기 에러 무시
@@ -82,6 +91,59 @@ export default function DailyLessonCard({ lesson, isAiGenerated }: DailyLessonCa
     }
   };
 
+  // 레슨 전체 보관 토글
+  const handleToggleLessonSave = () => {
+    try {
+      const saved = localStorage.getItem('saved_lessons');
+      let lessons: DailyLesson[] = saved ? JSON.parse(saved) : [];
+
+      if (isLessonSaved) {
+        lessons = lessons.filter((l) => l.id !== lesson.id);
+        setIsLessonSaved(false);
+      } else {
+        lessons.unshift(lesson);
+        setIsLessonSaved(true);
+      }
+      localStorage.setItem('saved_lessons', JSON.stringify(lessons));
+    } catch {
+      // 무시
+    }
+  };
+
+  // 핵심 표현 북마크 토글
+  const keyExpressionWordId = `key-${lesson.id}`;
+  const isKeyExpressionSaved = savedWordIds.has(keyExpressionWordId);
+
+  const handleToggleKeyExpression = () => {
+    try {
+      const saved = localStorage.getItem('saved_words');
+      let words: SavedWord[] = saved ? JSON.parse(saved) : [];
+
+      if (isKeyExpressionSaved) {
+        words = words.filter((w) => w.id !== keyExpressionWordId);
+        const nextSet = new Set(savedWordIds);
+        nextSet.delete(keyExpressionWordId);
+        setSavedWordIds(nextSet);
+      } else {
+        const newWord: SavedWord = {
+          id: keyExpressionWordId,
+          kanji: lesson.keyExpression.japanese,
+          reading: lesson.keyExpression.reading,
+          meaning: lesson.keyExpression.korean,
+          partOfSpeech: '핵심표현',
+          lessonId: lesson.id,
+          savedAt: new Date().toISOString(),
+          isMemorized: false,
+        };
+        words.push(newWord);
+        setSavedWordIds(new Set(savedWordIds).add(keyExpressionWordId));
+      }
+      localStorage.setItem('saved_words', JSON.stringify(words));
+    } catch {
+      // 무시
+    }
+  };
+
   // 학습 완료 토글
   const handleToggleComplete = () => {
     const nextState = !isLessonCompleted;
@@ -95,7 +157,7 @@ export default function DailyLessonCard({ lesson, isAiGenerated }: DailyLessonCa
 
   return (
     <div className="bg-white rounded-3xl border border-[#EDE8E1] card-shadow overflow-hidden transition-all">
-      {/* 상단 헤더 뱃지 */}
+      {/* 상단 헤더 뱃지 및 레슨 전체 보관 버튼 */}
       <div className="bg-gradient-to-r from-[#FAF0E6] to-[#FFF9F2] px-5 py-3.5 border-b border-[#F4DDD4] flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white text-[11px] font-bold text-[#E07A5F] border border-[#F4DDD4]">
@@ -107,11 +169,30 @@ export default function DailyLessonCard({ lesson, isAiGenerated }: DailyLessonCa
           </span>
         </div>
 
-        {isAiGenerated && (
-          <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-            AI 맞춤 생성
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {isAiGenerated && (
+            <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+              AI 맞춤 생성
+            </span>
+          )}
+
+          <button
+            onClick={handleToggleLessonSave}
+            className={`px-2.5 py-1 rounded-xl text-[11px] font-bold flex items-center gap-1 transition-all border active:scale-95 ${
+              isLessonSaved
+                ? 'bg-[#E07A5F] text-white border-[#E07A5F] shadow-sm'
+                : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+            }`}
+            title={isLessonSaved ? '보관함에서 제거' : '이 레슨 전체 보관하기'}
+          >
+            {isLessonSaved ? (
+              <BookmarkCheck className="w-3.5 h-3.5" />
+            ) : (
+              <Bookmark className="w-3.5 h-3.5" />
+            )}
+            <span>{isLessonSaved ? '보관됨' : '레슨 보관'}</span>
+          </button>
+        </div>
       </div>
 
       <div className="p-5 space-y-6">
@@ -122,6 +203,22 @@ export default function DailyLessonCard({ lesson, isAiGenerated }: DailyLessonCa
               오늘의 핵심 표현
             </span>
             <div className="flex items-center gap-1.5">
+              <button
+                onClick={handleToggleKeyExpression}
+                className={`p-1.5 rounded-lg border transition-all ${
+                  isKeyExpressionSaved
+                    ? 'bg-[#FAF0E6] text-[#E07A5F] border-[#E07A5F]'
+                    : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+                }`}
+                title={isKeyExpressionSaved ? '단어장에서 제거' : '핵심 표현 단어장에 저장'}
+              >
+                {isKeyExpressionSaved ? (
+                  <BookmarkCheck className="w-4 h-4" />
+                ) : (
+                  <Bookmark className="w-4 h-4" />
+                )}
+              </button>
+
               <button
                 onClick={() => handlePlay(lesson.keyExpression.japanese, 'key-slow', 0.75)}
                 className={`px-2 py-1 rounded-lg border text-[10px] font-medium transition-all ${
