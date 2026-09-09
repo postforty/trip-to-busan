@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { mockQuestions } from '@/data/mockQA';
 import { Question } from '@/types';
 import {
-  HelpCircle,
   MessageSquarePlus,
   Send,
   Calendar,
@@ -29,7 +28,9 @@ export default function QAPage() {
     if (saved) {
       try {
         const userQ: Question[] = JSON.parse(saved);
-        setQuestions([...userQ, ...mockQuestions]);
+        setTimeout(() => {
+          setQuestions([...userQ, ...mockQuestions]);
+        }, 0);
       } catch (e) {
         console.error(e);
       }
@@ -45,7 +46,7 @@ export default function QAPage() {
       authorName: name.trim() || '匿名の旅人',
       targetMonth: targetMonth.trim() || '時期未定',
       question: questionText.trim(),
-      answer: 'ご質問ありがとうございます！管理人が日本語で確認次第、心を込めて返信させていただきますね。（少々お待ちください📮）',
+      answer: 'ご質問ありがとうございます！管理人が日本語で確認次第、心を込めて返信させていただきますね。（少々お待ちください）',
       createdAt: new Date().toLocaleDateString('ja-JP')
     };
 
@@ -85,7 +86,7 @@ export default function QAPage() {
         </div>
 
         <h1 className="text-lg font-black text-[#2D3748] tracking-tight mb-1.5">
-          旅の質問ポスト 📮
+          旅の質問ポスト
         </h1>
         <p className="text-xs text-[#718096] leading-relaxed">
           「雨の日に一人で行ける場所は？」「この料理、辛いですか？」など、釜山旅行のちょっとした疑問をなんでも聞いてください！管理人が日本語の勉強を兼ねてお返事します。
@@ -135,7 +136,7 @@ export default function QAPage() {
               </div>
             ) : (
               <p className="text-[11px] text-gray-400 italic">
-                返信を準備中です...📮
+                返信を準備中です...
               </p>
             )}
           </div>
@@ -162,7 +163,7 @@ export default function QAPage() {
                   質問をお預かりしました！
                 </h3>
                 <p className="text-xs text-[#718096]">
-                  管理人が確認してお返事をお届けします📮
+                  管理人が確認してお返事をお届けします
                 </p>
               </div>
             ) : (

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Send, Heart, Sparkles, CheckCircle2 } from 'lucide-react';
+import { X, Send, Sparkles, CheckCircle2, ThumbsUp, Edit3 } from 'lucide-react';
 
 interface FeedbackModalProps {
   letterId: string;
@@ -97,24 +97,26 @@ export default function FeedbackModal({
                 <button
                   type="button"
                   onClick={() => setNaturalness('natural')}
-                  className={`py-2 px-3 rounded-xl border text-center font-medium transition-all ${
+                  className={`py-2 px-3 rounded-xl border text-center font-medium transition-all flex items-center justify-center gap-1.5 ${
                     naturalness === 'natural'
                       ? 'bg-[#FAF0E6] text-[#E07A5F] border-[#E07A5F]'
                       : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                   }`}
                 >
-                  👍 とても自然！
+                  <ThumbsUp className="w-3.5 h-3.5" />
+                  <span>とても自然！</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setNaturalness('awkward')}
-                  className={`py-2 px-3 rounded-xl border text-center font-medium transition-all ${
+                  className={`py-2 px-3 rounded-xl border text-center font-medium transition-all flex items-center justify-center gap-1.5 ${
                     naturalness === 'awkward'
                       ? 'bg-[#FAF0E6] text-[#E07A5F] border-[#E07A5F]'
                       : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                   }`}
                 >
-                  ✍️ 少し不自然な点あり
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>少し不自然な点あり</span>
                 </button>
               </div>
 

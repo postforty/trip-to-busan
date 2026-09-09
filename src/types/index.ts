@@ -71,3 +71,53 @@ export interface Question {
   answer?: string;
   createdAt: string;
 }
+
+export interface VocabItem {
+  id: string;
+  kanji: string;
+  reading: string;
+  meaning: string;
+  partOfSpeech: string;
+}
+
+export interface GrammarPoint {
+  title: string;
+  structure: string;
+  explanation: string;
+  comparison?: string;
+}
+
+export interface DialogueLine {
+  speaker: string;
+  japanese: string;
+  korean: string;
+}
+
+export interface DailyLesson {
+  id: string;
+  dayNumber: number;
+  seriesTitle: string;
+  themeTitle: string;
+  keyExpression: {
+    japanese: string;
+    reading: string;
+    korean: string;
+  };
+  dialogue: DialogueLine[];
+  grammar: GrammarPoint;
+  vocabulary: VocabItem[];
+  nuanceTip: string;
+  relatedLetterId?: string;
+}
+
+export interface SavedWord extends VocabItem {
+  lessonId: string;
+  savedAt: string;
+  isMemorized: boolean;
+}
+
+export interface SavedLesson {
+  lesson: DailyLesson;
+  savedAt: string;
+}
+

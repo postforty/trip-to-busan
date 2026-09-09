@@ -3,33 +3,49 @@
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { mockLetters } from '@/data/mockLetters';
-import { Category } from '@/types';
+import { mockLessons } from '@/data/mockLessons';
+import { Category, DailyLesson } from '@/types';
 import LetterCard from '@/components/letters/LetterCard';
 import CategoryFilter from '@/components/letters/CategoryFilter';
-import { Search, MessageSquareText, BookOpen, HelpCircle, Heart, Sparkles } from 'lucide-react';
+import DailyLessonCard from '@/components/daily/DailyLessonCard';
+import AiGeneratorBar from '@/components/daily/AiGeneratorBar';
+import {
+  Search,
+  MessageSquareText,
+  BookOpen,
+  Sparkles,
+  Mail
+} from 'lucide-react';
 
 export default function Home() {
+  // 데일리 학습 상태
+  const [currentLesson, setCurrentLesson] = useState<DailyLesson>(mockLessons[0]);
+  const [isAiGenerated, setIsAiGenerated] = useState(false);
+
+  // 로컬 편지 필터링 상태
   const [selectedCategory, setSelectedCategory] = useState<Category>('all');
   const [soloFilter, setSoloFilter] = useState(false);
   const [nonSpicyFilter, setNonSpicyFilter] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // 필터링 로직
+  // AI 생성 결과 수신
+  const handleLessonGenerated = (lesson: DailyLesson, isAi: boolean) => {
+    setCurrentLesson(lesson);
+    setIsAiGenerated(isAi);
+  };
+
+  // 로컬 편지 필터링 로직
   const filteredLetters = useMemo(() => {
     return mockLetters.filter((letter) => {
-      // 카테고리
       if (selectedCategory !== 'all' && letter.category !== selectedCategory) {
         return false;
       }
-      // 혼밥 필터
       if (soloFilter && letter.placeInfo?.soloFriendly !== 'welcome') {
         return false;
       }
-      // 안 매운 음식 필터 (0 또는 1)
       if (nonSpicyFilter && (letter.placeInfo?.spicyLevel ?? 0) > 1) {
         return false;
       }
-      // 검색어
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
         const matchTitle = letter.title.toLowerCase().includes(query);
@@ -47,52 +63,76 @@ export default function Home() {
 
   return (
     <div className="px-4 pt-4 space-y-6">
-      {/* 웰컴 인트로 배너 */}
+      {/* 1. 웰컴 인트로 배너 */}
       <section className="bg-gradient-to-br from-[#FAF0E6] to-[#FFF9F2] rounded-3xl p-5 border border-[#F4DDD4] relative overflow-hidden">
         <div className="relative z-10">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/80 backdrop-blur-sm rounded-full text-[10px] font-bold text-[#E07A5F] mb-2.5 border border-[#F4DDD4]">
             <Sparkles className="w-3 h-3 text-[#D97706]" />
-            <span>부산 토박이의 일본어 학습 & 로컬 편지</span>
+            <span>부산 토박이의 데일리 일본어 학습 & 로컬 편지</span>
           </div>
 
           <h1 className="text-lg font-black text-[#2D3748] tracking-tight leading-snug mb-1.5">
             釜山在住の私が届ける、<br />
-            ローカル旅のお便り 📮
+            まいにちの日本語ノート
           </h1>
           <p className="text-xs text-[#718096] leading-relaxed">
-            日本語を勉強中の釜山っ子が、本当におすすめしたい行きつけのお店や散歩道を日本語で綴っています。不自然な表現があればぜひ教えてください！
+            매일 실전 일본어 표현을 익히고, 부산의 숨은 로컬 이야기 속에서 자연스러운 일본어 문장을 확인해보세요.
           </p>
         </div>
       </section>
 
-      {/* 검색창 */}
-      <div className="relative">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="料理名、エリア（広安里、海雲台など）で検索..."
-          className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#EDE8E1] rounded-2xl text-xs focus:outline-none focus:ring-2 focus:ring-[#E07A5F]/20 focus:border-[#E07A5F] card-shadow"
-        />
-      </div>
+      {/* 2. AI 맞춤 일본어 생성기 바 */}
+      <AiGeneratorBar onLessonGenerated={handleLessonGenerated} />
 
-      {/* 카테고리 및 필터 */}
-      <CategoryFilter
-        selectedCategory={selectedCategory}
-        onSelectCategory={setSelectedCategory}
-        soloFilter={soloFilter}
-        onToggleSoloFilter={() => setSoloFilter(!soloFilter)}
-        nonSpicyFilter={nonSpicyFilter}
-        onToggleNonSpicyFilter={() => setNonSpicyFilter(!nonSpicyFilter)}
-      />
-
-      {/* 편지 아티클 목록 */}
-      <section className="space-y-4">
+      {/* 3. 데일리 일본어 학습 카드 섹션 */}
+      <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-[#2D3748]">
-            届いたお便り ({filteredLetters.length}件)
-          </h2>
+          <div className="flex items-center gap-1.5">
+            <BookOpen className="w-4 h-4 text-[#E07A5F]" />
+            <h2 className="text-sm font-bold text-[#2D3748]">
+              오늘의 일본어 레슨
+            </h2>
+          </div>
+
+          {/* 기본 프리셋 레슨 선택 칩 */}
+          <div className="flex items-center gap-1">
+            {mockLessons.map((lesson) => (
+              <button
+                key={lesson.id}
+                onClick={() => {
+                  setCurrentLesson(lesson);
+                  setIsAiGenerated(false);
+                }}
+                className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                  currentLesson.id === lesson.id && !isAiGenerated
+                    ? 'bg-[#2D3748] text-white'
+                    : 'bg-white text-gray-400 border border-[#EDE8E1] hover:bg-gray-50'
+                }`}
+              >
+                Day {lesson.dayNumber}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <DailyLessonCard lesson={currentLesson} isAiGenerated={isAiGenerated} />
+      </section>
+
+      {/* 4. 부산 로컬 편지 (부차적 아카이브 섹션) */}
+      <section className="pt-4 border-t border-[#EDE8E1] space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <Mail className="w-4 h-4 text-[#E07A5F]" />
+            <div>
+              <h2 className="text-sm font-bold text-[#2D3748]">
+                실전 적용 로컬 편지 ({filteredLetters.length}건)
+              </h2>
+              <p className="text-[10px] text-gray-400">
+                배운 표현이 녹아있는 부산 현지인의 솔직 담백한 이야기
+              </p>
+            </div>
+          </div>
+
           {(selectedCategory !== 'all' || soloFilter || nonSpicyFilter || searchQuery) && (
             <button
               onClick={() => {
@@ -103,15 +143,38 @@ export default function Home() {
               }}
               className="text-[11px] text-[#E07A5F] hover:underline"
             >
-              条件をクリア
+              초기화
             </button>
           )}
         </div>
 
+        {/* 검색창 */}
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="음식명, 지역(광안리, 해운대 등)으로 편지 검색..."
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#EDE8E1] rounded-2xl text-xs focus:outline-none focus:ring-2 focus:ring-[#E07A5F]/20 focus:border-[#E07A5F] card-shadow"
+          />
+        </div>
+
+        {/* 카테고리 및 필터 */}
+        <CategoryFilter
+          selectedCategory={selectedCategory}
+          onSelectCategory={setSelectedCategory}
+          soloFilter={soloFilter}
+          onToggleSoloFilter={() => setSoloFilter(!soloFilter)}
+          nonSpicyFilter={nonSpicyFilter}
+          onToggleNonSpicyFilter={() => setNonSpicyFilter(!nonSpicyFilter)}
+        />
+
+        {/* 편지 목록 */}
         {filteredLetters.length === 0 ? (
           <div className="bg-white rounded-2xl p-8 text-center border border-[#EDE8E1] space-y-2">
-            <p className="text-sm text-gray-500">条件に合うお便りが見つかりませんでした。</p>
-            <p className="text-xs text-gray-400">検索語や絞り込み条件を変えてみてください。</p>
+            <p className="text-sm text-gray-500">조건에 맞는 편지를 찾지 못했습니다.</p>
+            <p className="text-xs text-gray-400">검색어 또는 필터 조건을 변경해보세요.</p>
           </div>
         ) : (
           filteredLetters.map((letter) => (
@@ -120,10 +183,10 @@ export default function Home() {
         )}
       </section>
 
-      {/* 실전 여행 도우미 바로가기 카드 배너 */}
+      {/* 5. 여행 도우미 바로가기 */}
       <section className="pt-4 border-t border-[#EDE8E1] space-y-2.5">
         <h3 className="text-xs font-bold text-[#718096] uppercase tracking-wider">
-          旅のお役立ちコーナー
+          학습 & 여행 도우미
         </h3>
 
         <div className="grid grid-cols-2 gap-2.5">
@@ -136,14 +199,14 @@ export default function Home() {
                 <MessageSquareText className="w-4 h-4" />
               </div>
               <h4 className="text-xs font-bold text-[#2D3748] mb-0.5">
-                指差し会話カード
+                손가락 회화 카드
               </h4>
               <p className="text-[10px] text-[#718096]">
-                食堂で画面を見せるだけ！音声発音つき
+                식당/카페에서 화면만 보여주면 되는 한국어-일본어
               </p>
             </div>
             <span className="text-[10px] font-bold text-[#E07A5F] mt-2 block">
-              使ってみる →
+              사용해보기 →
             </span>
           </Link>
 
@@ -156,14 +219,14 @@ export default function Home() {
                 <BookOpen className="w-4 h-4" />
               </div>
               <h4 className="text-xs font-bold text-[#2D3748] mb-0.5">
-                釜山方言ノート
+                부산 사투리 노트
               </h4>
               <p className="text-[10px] text-[#718096]">
-                「단디 해라」「밥 뭇나」現地のリアル言葉
+                「단디 해라」「밥 뭇나」 현지 표현의 일본어 풀이
               </p>
             </div>
             <span className="text-[10px] font-bold text-[#2E7D32] mt-2 block">
-              見てみる →
+              살펴보기 →
             </span>
           </Link>
         </div>

@@ -94,8 +94,9 @@ export default function FeedbackWidget({ letterId, letterTitle }: FeedbackWidget
                     <span>{item.createdAt}</span>
                   </div>
                   {item.suggestion && (
-                    <div className="bg-[#FAF0E6]/50 p-2 rounded-lg text-[#8C5243] text-[11px] mb-1 font-medium">
-                      💡 提案: {item.suggestion}
+                    <div className="bg-[#FAF0E6]/50 p-2 rounded-lg text-[#8C5243] text-[11px] mb-1 font-medium flex items-start gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-[#E07A5F] shrink-0 mt-0.5" />
+                      <span>提案: {item.suggestion}</span>
                     </div>
                   )}
                   {item.comment && (

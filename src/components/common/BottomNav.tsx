@@ -3,18 +3,25 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Mail, MessageSquareText, BookOpen, HelpCircle } from 'lucide-react';
+import { Mail, MessageSquareText, BookOpen, HelpCircle, Bookmark } from 'lucide-react';
 
 export default function BottomNav() {
   const pathname = usePathname();
 
   const navItems = [
     {
-      label: 'お便り',
-      sublabel: 'Letters',
+      label: 'まいにち',
+      sublabel: 'Daily',
       href: '/',
-      icon: Mail,
+      icon: BookOpen,
       active: pathname === '/' || pathname.startsWith('/letters')
+    },
+    {
+      label: '単語帳',
+      sublabel: 'Voca',
+      href: '/voca',
+      icon: Bookmark,
+      active: pathname.startsWith('/voca')
     },
     {
       label: '指差し会話',
@@ -27,7 +34,7 @@ export default function BottomNav() {
       label: '方言ノート',
       sublabel: 'Dialect',
       href: '/dialects',
-      icon: BookOpen,
+      icon: Mail,
       active: pathname.startsWith('/dialects')
     },
     {

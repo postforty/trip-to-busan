@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { mockDialects } from '@/data/mockDialects';
-import { BookOpen, Volume2, Sparkles, MessageCircle } from 'lucide-react';
+import { Volume2, Sparkles, Info } from 'lucide-react';
 
 export default function DialectsPage() {
   const [isPlaying, setIsPlaying] = useState<string | null>(null);
@@ -29,7 +29,7 @@ export default function DialectsPage() {
           <span>街や食堂で耳にする言葉</span>
         </div>
         <h1 className="text-lg font-black text-[#2D3748] tracking-tight mb-1.5">
-          釜山方言プチノート 🗣️
+          釜山方言プチノート
         </h1>
         <p className="text-xs text-[#4A5568] leading-relaxed">
           釜山の街を歩いていると、標準語の韓国語テキストには載っていない独特のイントネーションや方言（サトゥリ）を耳にします。知っておくと釜山旅が何倍も楽しくなる表現を集めました！
@@ -80,10 +80,13 @@ export default function DialectsPage() {
             </div>
 
             {/* 상황 설명 */}
-            <p className="text-xs text-[#4A5568] leading-relaxed bg-[#FBF9F5] p-3 rounded-xl border border-[#EDE8E1]">
-              💡 <strong>どんな時に使う？</strong><br />
-              {d.situation}
-            </p>
+            <div className="text-xs text-[#4A5568] leading-relaxed bg-[#FBF9F5] p-3 rounded-xl border border-[#EDE8E1] flex items-start gap-1.5">
+              <Info className="w-3.5 h-3.5 text-[#2E7D32] shrink-0 mt-0.5" />
+              <div>
+                <strong>どんな時に使う？</strong><br />
+                {d.situation}
+              </div>
+            </div>
 
             {/* 실제 대화 예문 */}
             <div className="text-xs text-gray-600 italic bg-gray-50 p-3 rounded-xl">

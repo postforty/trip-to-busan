@@ -12,7 +12,8 @@ import {
   Flame,
   CreditCard,
   Car,
-  ShoppingBag
+  ShoppingBag,
+  Info
 } from 'lucide-react';
 
 export default function PhrasesPage() {
@@ -60,7 +61,7 @@ export default function PhrasesPage() {
           <span>店員さんに見せるだけ！</span>
         </div>
         <h1 className="text-lg font-black text-[#2D3748] tracking-tight mb-1.5">
-          指差し韓国語会話 💬
+          指差し韓国語会話
         </h1>
         <p className="text-xs text-[#718096] leading-relaxed">
           食堂やカフェで困ったときは、この画面をそのまま店員さんに見せてください！右上のスピーカーボタンを押すと韓国語の音声も流れます。
@@ -143,9 +144,10 @@ export default function PhrasesPage() {
 
             {/* 실전 팁 */}
             {phrase.tip && (
-              <p className="mt-2.5 text-[11px] text-gray-500 leading-relaxed bg-gray-50 p-2 rounded-lg">
-                💡 <strong>ワンポイント</strong>：{phrase.tip}
-              </p>
+              <div className="mt-2.5 text-[11px] text-gray-500 leading-relaxed bg-gray-50 p-2 rounded-lg flex items-start gap-1.5">
+                <Info className="w-3.5 h-3.5 text-[#E07A5F] shrink-0 mt-0.5" />
+                <span><strong>ワンポイント</strong>：{phrase.tip}</span>
+              </div>
             )}
           </div>
         ))}
